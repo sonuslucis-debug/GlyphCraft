@@ -33,9 +33,9 @@ namespace GlyphCraft.Controls
                                 null, null, null, null, null, null);
         }
 
-        public static GlyphRun Single(GlyphTypeface gt, ushort glyph, double size, Point origin, double ppd)
+        public static GlyphRun Single(FontFace face, ushort glyph, double size, Point origin, double ppd)
         {
-            return Run(gt, new List<ushort> { glyph }, new List<double> { gt.AdvanceWidths[glyph] * size }, size, origin, ppd);
+            return Run(face.Glyphs, new List<ushort> { glyph }, new List<double> { face.Advance(glyph) * size }, size, origin, ppd);
         }
 
         public static FormattedText Label(string text, double size, Brush brush, double ppd)

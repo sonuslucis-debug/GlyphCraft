@@ -141,10 +141,10 @@ namespace GlyphCraft.Controls
 
                     ushort gi;
                     if (!_face.Map.TryGetValue(_codes[idx], out gi)) continue;
-                    double adv = gt.AdvanceWidths[gi] * size;
+                    double adv = _face.Advance(gi) * size;
                     var origin = new Point(rect.X + (_cell - adv) / 2, rect.Y + _cell * 0.5 + size * 0.35);
                     dc.PushClip(new RectangleGeometry(rect));
-                    dc.DrawGlyphRun(sel ? Brushes.White : GlyphDraw.Navy, GlyphDraw.Single(gt, gi, size, origin, ppd));
+                    dc.DrawGlyphRun(sel ? Brushes.White : GlyphDraw.Navy, GlyphDraw.Single(_face, gi, size, origin, ppd));
                     dc.Pop();
                 }
             }

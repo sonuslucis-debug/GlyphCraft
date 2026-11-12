@@ -201,7 +201,7 @@ namespace GlyphCraft
             Preview.Show(_face, _code);
             InfoCode.Text = "U+" + _code.ToString("X4");
             InfoBlock.Text = UnicodeBlocks.NameOf(_code);
-            double adv = _face.Glyphs.AdvanceWidths[gi];
+            double adv = _face.Advance(gi);
             InfoDetail.Text = "Decimal " + _code + "    HTML &#" + _code + ";\nGlyph ID " + gi +
                               "    Advance " + Math.Round(adv * 1000) + "/1000 em";
             var k = Keystroke.For(_code, _face.IsSymbol);

@@ -20,15 +20,36 @@ namespace GlyphCraft.Services
         public bool IsSymbol;
         public List<int> Codes = new List<int>();
         public IDictionary<int, ushort> Map;
+        public double Baseline = 0.8, LineHeight = 1.2, CapsHeight, XHeight;
+        double[] _adv;
 
-        public static FontFace Create(string family, string style, string source, GlyphTypeface gt,
-                                      IDictionary<int, ushort> fallbackMap)
+        /// <summary>Installed font: metrics come from Windows.</summary>
+        public static FontFace CreateInstalled(string family, string style, GlyphTypeface gt)
+        {
+            var f = new FontFace { Family = family, Style = style, Source = "Installed", Glyphs = gt };
+            f.Map = gt.CharacterToGlyphMap;
+            try { f.Baseline = gt.Baseline; f.LineHeight = gt.Height > 0.2 ? gt.Height : 1.2; f.CapsHeight = gt.CapsHeight; f.XHeight = gt.XHeight; }
+            catch { }
+            f.Finish();
+            return f;
+        }
+
+        /// <summary>Font from a file: cmap, widths and metrics are read straight from the font bytes.</summary>
+        public static FontFace CreateFromFile(string family, string style, string source, GlyphTypeface gt, SfntData data)
         {
             var f = new FontFace { Family = family, Style = style, Source = source, Glyphs = gt };
-            IDictionary<int, ushort> map = fallbackMap;
-            if (map == null) map = gt.CharacterToGlyphMap;
-            f.Map = map;
-            f.IsSymbol = map.ContainsKey(0xF041) && !map.ContainsKey(0x41);
+            f.Map = data.Map;
+            f._adv = data.Advances;
+            f.Baseline = data.Baseline; f.LineHeight = data.LineHeight;
+            f.CapsHeight = data.CapsHeight; f.XHeight = data.XHeight;
+            f.Finish();
+            return f;
+        }
+
+        void Finish()
+        {
+            var map = Map;
+            IsSymbol = map.ContainsKey(0xF041) && !map.ContainsKey(0x41);
             var codes = new List<int>(map.Count);
             foreach (int cp in map.Keys)
             {
@@ -38,8 +59,14 @@ namespace GlyphCraft.Services
                 codes.Add(cp);
             }
             codes.Sort();
-            f.Codes = codes;
-            return f;
+            Codes = codes;
+        }
+
+        /// <summary>Advance width of a glyph as a fraction of the em.</summary>
+        public double Advance(ushort glyph)
+        {
+            if (_adv != null && glyph < _adv.Length) return _adv[glyph];
+            return Glyphs.AdvanceWidths[glyph];
         }
 
         /// <summary>Finds the glyph for a code point (symbol fonts keep A-Z etc. up at U+F0xx).</summary>
@@ -137,7 +164,7 @@ namespace GlyphCraft.Services
                 string style = PickName(tf.FaceNames);
                 if (string.IsNullOrEmpty(style)) style = "Regular";
                 if (!seen.Add(style)) continue;
-                try { faces.Add(FontFace.Create(name, style, "Installed", gt, null)); } catch { }
+                try { faces.Add(FontFace.CreateInstalled(name, style, gt)); } catch { }
             }
             return faces;
         }
@@ -222,35 +249,22 @@ namespace GlyphCraft.Services
             {
                 try
                 {
+                    // Everything we need is read from the bytes ourselves; Windows is only
+                    // used to draw the glyph outlines.
+                    SfntData data = SfntInfo.Read(File.ReadAllBytes(path));
+                    if (data.Map.Count == 0)
+                        throw new InvalidOperationException("this font has no character map GlyphCraft can read");
+
                     var gt = new GlyphTypeface(new Uri(path));
 
-                    // Each piece is read separately so one odd table can't sink the whole font.
-                    string family = Safe(() => PickName(gt.Win32FamilyNames));
-                    string style = Safe(() => PickName(gt.Win32FaceNames));
-                    if (string.IsNullOrEmpty(family)) family = Safe(() => PickName(gt.FamilyNames));
-                    if (string.IsNullOrEmpty(style)) style = Safe(() => PickName(gt.FaceNames));
-
-                    byte[] raw = null;
-                    if (string.IsNullOrEmpty(family) || string.IsNullOrEmpty(style))
-                    {
-                        raw = File.ReadAllBytes(path);
-                        string f2, s2;
-                        SfntInfo.ReadNames(raw, out f2, out s2);
-                        if (string.IsNullOrEmpty(family)) family = f2;
-                        if (string.IsNullOrEmpty(style)) style = s2;
-                    }
+                    string family = data.Family;
+                    string style = data.Style;
+                    if (string.IsNullOrEmpty(family)) family = Safe(() => PickName(gt.Win32FamilyNames));
+                    if (string.IsNullOrEmpty(style)) style = Safe(() => PickName(gt.Win32FaceNames));
                     if (string.IsNullOrEmpty(family)) family = Path.GetFileNameWithoutExtension(sourcePath);
                     if (string.IsNullOrEmpty(style)) style = "Regular";
 
-                    IDictionary<int, ushort> fallback = null;
-                    try { int n = gt.CharacterToGlyphMap.Count; if (n == 0) throw new InvalidOperationException(); }
-                    catch
-                    {
-                        if (raw == null) raw = File.ReadAllBytes(path);
-                        fallback = SfntInfo.ReadCmap(raw);
-                    }
-
-                    return FontFace.Create(family, style, Path.GetFileName(sourcePath), gt, fallback);
+                    return FontFace.CreateFromFile(family, style, Path.GetFileName(sourcePath), gt, data);
                 }
                 catch (Exception ex)
                 {

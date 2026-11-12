@@ -8,8 +8,80 @@ namespace GlyphCraft.Core
     /// Small independent reader for the cmap and name tables. Used as a safety net when
     /// Windows' own font API can't supply them for an unusual font.
     /// </summary>
+    public sealed class SfntData
+    {
+        public Dictionary<int, ushort> Map = new Dictionary<int, ushort>();
+        public double[] Advances;          // per glyph, in em fractions
+        public double Baseline = 0.8;      // ascent in em
+        public double LineHeight = 1.2;    // ascent + descent + line gap in em
+        public double CapsHeight, XHeight;
+        public string Family = "", Style = "";
+    }
+
     public static class SfntInfo
     {
+        /// <summary>Reads everything GlyphCraft needs straight from the font bytes (no Windows font API).</summary>
+        public static SfntData Read(byte[] d)
+        {
+            var r = new SfntData();
+            r.Map = ReadCmap(d);
+            ReadNames(d, out r.Family, out r.Style);
+            try
+            {
+                int off, len, hoff, hlen;
+                double upem = 1000;
+                if (FindTable(d, "head", out off, out len) && len >= 20) upem = U16(d, off + 18);
+                if (upem < 16) upem = 1000;
+
+                double asc = 0, desc = 0, gap = 0;
+                if (FindTable(d, "hhea", out hoff, out hlen) && hlen >= 36)
+                {
+                    asc = (short)U16(d, hoff + 4);
+                    desc = (short)U16(d, hoff + 6);
+                    gap = (short)U16(d, hoff + 8);
+                    int numH = U16(d, hoff + 34);
+
+                    int moff, mlen, xoff, xlen;
+                    if (FindTable(d, "maxp", out moff, out mlen) && mlen >= 6 &&
+                        FindTable(d, "hmtx", out xoff, out xlen))
+                    {
+                        int numGlyphs = U16(d, moff + 4);
+                        var adv = new double[numGlyphs];
+                        double last = 0;
+                        for (int i = 0; i < numGlyphs; i++)
+                        {
+                            if (i < numH && xoff + 4 * i + 2 <= d.Length) last = U16(d, xoff + 4 * i);
+                            adv[i] = last / upem;
+                        }
+                        r.Advances = adv;
+                    }
+                }
+
+                int ooff, olen;
+                if (FindTable(d, "OS/2", out ooff, out olen))
+                {
+                    if (asc == 0 && desc == 0 && olen >= 74)
+                    {
+                        asc = (short)U16(d, ooff + 68);
+                        desc = (short)U16(d, ooff + 70);
+                        gap = (short)U16(d, ooff + 72);
+                    }
+                    if (olen >= 90 && U16(d, ooff) >= 2)
+                    {
+                        r.XHeight = (short)U16(d, ooff + 86) / upem;
+                        r.CapsHeight = (short)U16(d, ooff + 88) / upem;
+                    }
+                }
+                if (asc - desc > 0)
+                {
+                    r.Baseline = asc / upem;
+                    r.LineHeight = (asc - desc + gap) / upem;
+                }
+            }
+            catch { }
+            return r;
+        }
+
         static int U16(byte[] d, int o) { return (d[o] << 8) | d[o + 1]; }
         static uint U32(byte[] d, int o) { return (uint)((d[o] << 24) | (d[o + 1] << 16) | (d[o + 2] << 8) | d[o + 3]); }
 

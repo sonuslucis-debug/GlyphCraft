@@ -51,14 +51,14 @@ namespace GlyphCraft.Controls
             if (!_face.Map.TryGetValue(_code, out gi)) return;
 
             double ppd = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-            double lineH = gt.Height > 0.2 ? gt.Height : 1.2;
+            double lineH = _face.LineHeight > 0.2 ? _face.LineHeight : 1.2;
             double size = h * 0.74 / lineH;
-            double adv1 = gt.AdvanceWidths[gi];
+            double adv1 = _face.Advance(gi);
             if (adv1 * size > w * 0.8) size = w * 0.8 / adv1;
 
             double lineBox = lineH * size;
             double top = (h - lineBox) / 2;
-            double baseY = top + gt.Baseline * size;
+            double baseY = top + _face.Baseline * size;
             double adv = adv1 * size;
             double x0 = (w - adv) / 2;
 
@@ -68,13 +68,13 @@ namespace GlyphCraft.Controls
                 HLine(dc, w, top, "ascender", ppd);
                 HLine(dc, w, baseY, "baseline", ppd);
                 HLine(dc, w, top + lineBox, "descender", ppd);
-                if (gt.CapsHeight > 0.05) HLine(dc, w, baseY - gt.CapsHeight * size, "cap height", ppd);
-                if (gt.XHeight > 0.05) HLine(dc, w, baseY - gt.XHeight * size, "x-height", ppd);
+                if (_face.CapsHeight > 0.05) HLine(dc, w, baseY - _face.CapsHeight * size, "cap height", ppd);
+                if (_face.XHeight > 0.05) HLine(dc, w, baseY - _face.XHeight * size, "x-height", ppd);
                 dc.DrawLine(Dash, new Point(x0, 0), new Point(x0, h));
                 dc.DrawLine(Dash, new Point(x0 + adv, 0), new Point(x0 + adv, h));
             }
 
-            dc.DrawGlyphRun(GlyphDraw.Navy, GlyphDraw.Single(gt, gi, size, new Point(x0, baseY), ppd));
+            dc.DrawGlyphRun(GlyphDraw.Navy, GlyphDraw.Single(_face, gi, size, new Point(x0, baseY), ppd));
         }
 
         static void HLine(DrawingContext dc, double w, double y, string label, double ppd)

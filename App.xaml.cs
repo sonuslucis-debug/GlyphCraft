@@ -6,7 +6,7 @@ namespace GlyphCraft
 {
     public partial class App : Application
     {
-        public const string VersionText = "1.0.2";
+        public const string VersionText = "1.0.3";
         public const string BuildDate = "12 November 2026";
         public const string SiteUrl = "https://sonuslucis.com";
 

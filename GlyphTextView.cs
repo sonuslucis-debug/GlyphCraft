@@ -31,7 +31,7 @@ namespace GlyphCraft.Controls
         double LineHeight()
         {
             if (_face == null) return _size * 1.2;
-            double h = _face.Glyphs.Height;
+            double h = _face.LineHeight;
             return (h > 0.2 ? h : 1.2) * _size;
         }
 
@@ -46,7 +46,7 @@ namespace GlyphCraft.Controls
             {
                 ushort gi; int actual;
                 if (!_face.Resolve(ch, out gi, out actual)) continue;
-                double adv = gt.AdvanceWidths[gi] * _size;
+                double adv = _face.Advance(gi) * _size;
                 if (ch == ' ' && cur.Glyphs.Count == 0) continue;
                 if (cur.Glyphs.Count > 0 && x + adv > maxW)
                 {
@@ -77,8 +77,8 @@ namespace GlyphCraft.Controls
             double ppd = VisualTreeHelper.GetDpi(this).PixelsPerDip;
             var lines = Layout(Math.Max(ActualWidth, _size));
             double lh = LineHeight();
-            double baseline = _face.Glyphs.Baseline * _size;
-            if (_face.Glyphs.Height <= 0.2) baseline = _size;
+            double baseline = _face.Baseline * _size;
+            if (_face.LineHeight <= 0.2) baseline = _size;
             for (int i = 0; i < lines.Count; i++)
             {
                 var run = GlyphDraw.Run(_face.Glyphs, lines[i].Glyphs, lines[i].Advances, _size,
