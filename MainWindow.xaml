@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="clr-namespace:GlyphCraft.Controls"
-        Title="GlyphCraft" Width="1200" Height="820" MinWidth="960" MinHeight="680"
+        Title="GlyphCraft" Width="1200" Height="820" MinWidth="900" MinHeight="560"
         Background="White" FontFamily="{StaticResource Brand}" Foreground="{StaticResource Ink}"
         AllowDrop="True" Drop="Window_Drop" Loaded="Window_Loaded">
     <Grid>
@@ -33,7 +33,7 @@
         <!-- Body -->
         <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280"/>
+                <ColumnDefinition Width="240"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -74,22 +74,22 @@
             <Grid Grid.Column="1" Margin="16,12,16,12">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="270"/>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="2*" MinHeight="230"/>
+                    <RowDefinition Height="3*" MinHeight="140"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- Toolbar -->
                 <DockPanel Grid.Row="0" Margin="0,0,0,10" LastChildFill="False">
                     <TextBlock Text="Style" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
-                    <ComboBox x:Name="StyleBox" Width="150" Margin="0,0,16,0" DisplayMemberPath="Style"
+                    <ComboBox x:Name="StyleBox" Width="130" Margin="0,0,14,0" DisplayMemberPath="Style"
                               SelectionChanged="StyleBox_SelectionChanged"/>
                     <TextBlock Text="Show" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
-                    <ComboBox x:Name="BlockBox" Width="230" Margin="0,0,16,0" DisplayMemberPath="Label"
+                    <ComboBox x:Name="BlockBox" Width="200" Margin="0,0,14,0" DisplayMemberPath="Label"
                               SelectionChanged="BlockBox_SelectionChanged"/>
                     <Button DockPanel.Dock="Right" Style="{StaticResource BrandButton}" Content="Find" Margin="6,0,0,0"
                             Click="Find_Click"/>
-                    <TextBox x:Name="FindBox" DockPanel.Dock="Right" Width="170" Padding="6,4" FontSize="12" VerticalContentAlignment="Center"
+                    <TextBox x:Name="FindBox" DockPanel.Dock="Right" Width="130" Padding="6,4" FontSize="12" VerticalContentAlignment="Center"
                              ToolTip="A character, a decimal code (8364) or hex (U+20AC)" KeyDown="FindBox_KeyDown"/>
                     <TextBlock DockPanel.Dock="Right" Text="Find" VerticalAlignment="Center" Margin="0,0,6,0" FontSize="12"/>
                 </DockPanel>
@@ -98,25 +98,27 @@
                 <Grid Grid.Row="1">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="290"/>
+                        <ColumnDefinition Width="270"/>
                     </Grid.ColumnDefinitions>
                     <c:GlyphPreview x:Name="Preview" Grid.Column="0" Margin="0,0,12,0"
                                     ToolTip="Right-click for Copy, Save as EPS and Save as SVG"/>
-                    <Border Grid.Column="1" BorderBrush="{StaticResource Line}" BorderThickness="1" Background="White" Padding="16,12">
-                        <StackPanel>
-                            <TextBlock x:Name="InfoCode" FontSize="30" FontWeight="Bold" Foreground="{StaticResource Navy}" Text="U+0041"/>
-                            <TextBlock x:Name="InfoBlock" FontSize="11" Foreground="{StaticResource Accent}" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                            <TextBlock x:Name="InfoDetail" FontSize="12" LineHeight="19" Margin="0,0,0,12"/>
-                            <Border Background="{StaticResource Tint}" CornerRadius="3" Padding="12,8">
-                                <StackPanel>
-                                    <TextBlock Text="TYPE WITH ALT" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Accent}"/>
-                                    <TextBlock x:Name="InfoKeys" FontSize="22" FontWeight="Bold" Foreground="{StaticResource Navy}" Margin="0,2,0,2"/>
-                                    <TextBlock x:Name="InfoKeyHint" FontSize="10" TextWrapping="Wrap" Foreground="#4B627A"/>
-                                </StackPanel>
-                            </Border>
-                            <CheckBox x:Name="GuidesCheck" Content="Show guides" IsChecked="True" Margin="0,12,0,0" FontSize="12"
-                                      Checked="Guides_Changed" Unchecked="Guides_Changed"/>
-                        </StackPanel>
+                    <Border Grid.Column="1" BorderBrush="{StaticResource Line}" BorderThickness="1" Background="White" Padding="14,8,6,8">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="0,0,8,0">
+                                <TextBlock x:Name="InfoCode" FontSize="26" FontWeight="Bold" Foreground="{StaticResource Navy}" Text="U+0041"/>
+                                <TextBlock x:Name="InfoBlock" FontSize="11" Foreground="{StaticResource Accent}" Margin="0,0,0,6" TextWrapping="Wrap"/>
+                                <TextBlock x:Name="InfoDetail" FontSize="11" LineHeight="16" Margin="0,0,0,8"/>
+                                <Border Background="{StaticResource Tint}" CornerRadius="3" Padding="10,6">
+                                    <StackPanel>
+                                        <TextBlock Text="TYPE WITH ALT" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Accent}"/>
+                                        <TextBlock x:Name="InfoKeys" FontSize="20" FontWeight="Bold" Foreground="{StaticResource Navy}" Margin="0,1,0,1"/>
+                                        <TextBlock x:Name="InfoKeyHint" FontSize="10" TextWrapping="Wrap" Foreground="#4B627A"/>
+                                    </StackPanel>
+                                </Border>
+                                <CheckBox x:Name="GuidesCheck" Content="Show guides" IsChecked="True" Margin="0,8,0,0" FontSize="11"
+                                          Checked="Guides_Changed" Unchecked="Guides_Changed"/>
+                            </StackPanel>
+                        </ScrollViewer>
                     </Border>
                 </Grid>
 

@@ -46,6 +46,11 @@ namespace GlyphCraft
         {
             InitializeComponent();
 
+            // Fit smaller / scaled screens (e.g. 1080p laptops at 125-150% scaling)
+            var wa = SystemParameters.WorkArea;
+            Width = Math.Min(Width, wa.Width - 16);
+            Height = Math.Min(Height, wa.Height - 16);
+
             GlyphGridView.Attach(GridBar);
             GlyphGridView.SelectionChanged += OnGlyphSelected;
             GlyphGridView.Activated += code => AddToCopy(code);
@@ -197,8 +202,8 @@ namespace GlyphCraft
             InfoCode.Text = "U+" + _code.ToString("X4");
             InfoBlock.Text = UnicodeBlocks.NameOf(_code);
             double adv = _face.Glyphs.AdvanceWidths[gi];
-            InfoDetail.Text = "Decimal   " + _code + "\nHTML   &#" + _code + ";\nGlyph ID   " + gi +
-                              "\nAdvance   " + Math.Round(adv * 1000) + " / 1000 em";
+            InfoDetail.Text = "Decimal " + _code + "    HTML &#" + _code + ";\nGlyph ID " + gi +
+                              "    Advance " + Math.Round(adv * 1000) + "/1000 em";
             var k = Keystroke.For(_code, _face.IsSymbol);
             InfoKeys.Text = k.Keys;
             InfoKeyHint.Text = k.Hint;

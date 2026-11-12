@@ -57,9 +57,7 @@ namespace GlyphCraft.Core
                 {
                     HasAltCode = true,
                     Keys = "Alt + 0" + code.ToString("D3"),
-                    Hint = symbolFont
-                        ? "Hold Alt, type the digits on the numeric keypad (Num Lock on), with this font active."
-                        : "Hold Alt, type the digits on the numeric keypad (Num Lock on), then release Alt."
+                    Hint = "Hold Alt and type the digits on the numeric keypad."
                 };
             }
 
@@ -68,7 +66,7 @@ namespace GlyphCraft.Core
             {
                 HasAltCode = false,
                 Keys = "No Alt-code",
-                Hint = "In Word: type " + hex + " then press Alt + X.  Or copy the character below."
+                Hint = "In Word: type " + hex + ", then Alt + X."
             };
         }
     }

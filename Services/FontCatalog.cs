@@ -213,23 +213,42 @@ namespace GlyphCraft.Services
         public static FontFace MakeLoadedFace(string cachePath, string sourcePath, out string error)
         {
             error = null;
-            try
+            Exception last = null;
+            foreach (string path in CandidatePaths(cachePath))
             {
-                var gt = new GlyphTypeface(new Uri(cachePath));
-                string family = PickName(gt.Win32FamilyNames);
-                string style = PickName(gt.Win32FaceNames);
-                if (string.IsNullOrEmpty(family)) family = PickName(gt.FamilyNames);
-                if (string.IsNullOrEmpty(family)) family = Path.GetFileNameWithoutExtension(sourcePath);
-                if (string.IsNullOrEmpty(style)) style = PickName(gt.FaceNames);
-                if (string.IsNullOrEmpty(style)) style = "Regular";
-                return FontFace.Create(family, style, Path.GetFileName(sourcePath), gt);
+                try
+                {
+                    var gt = new GlyphTypeface(new Uri(path));
+                    string family = PickName(gt.Win32FamilyNames);
+                    string style = PickName(gt.Win32FaceNames);
+                    if (string.IsNullOrEmpty(family)) family = PickName(gt.FamilyNames);
+                    if (string.IsNullOrEmpty(family)) family = Path.GetFileNameWithoutExtension(sourcePath);
+                    if (string.IsNullOrEmpty(style)) style = PickName(gt.FaceNames);
+                    if (string.IsNullOrEmpty(style)) style = "Regular";
+                    return FontFace.Create(family, style, Path.GetFileName(sourcePath), gt);
+                }
+                catch (Exception ex)
+                {
+                    last = ex;
+                }
             }
-            catch (Exception)
-            {
-                error = "Windows couldn't read the outlines in this font (Type 1 and bitmap fonts aren't supported).";
-                return null;
-            }
+            error = "Windows couldn't open this font" +
+                    (last != null ? " (" + last.GetType().Name + ": " + last.Message + ")" : "") + ".";
+            return null;
         }
 
+        // Second attempt for OpenType/CFF files: same bytes under a .ttf name.
+        static IEnumerable<string> CandidatePaths(string cachePath)
+        {
+            yield return cachePath;
+            if (cachePath.EndsWith(".otf", StringComparison.OrdinalIgnoreCase))
+            {
+                string alt = Path.ChangeExtension(cachePath, ".ttf");
+                bool ok = true;
+                try { if (!File.Exists(alt)) File.Copy(cachePath, alt); }
+                catch { ok = false; }
+                if (ok) yield return alt;
+            }
+        }
     }
 }
