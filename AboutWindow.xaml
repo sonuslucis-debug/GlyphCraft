@@ -1,0 +1,23 @@
+<Window x:Class="GlyphCraft.AboutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About GlyphCraft" Width="440" Height="560" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner" Background="White"
+        FontFamily="{StaticResource Brand}" Foreground="{StaticResource Ink}">
+    <StackPanel Margin="28,24" HorizontalAlignment="Center">
+        <Image Source="/Assets/logo.png" Width="170" Height="170" RenderOptions.BitmapScalingMode="HighQuality"/>
+        <TextBlock Text="GlyphCraft" FontSize="28" FontWeight="Bold" Foreground="{StaticResource Navy}"
+                   HorizontalAlignment="Center" Margin="0,12,0,0"/>
+        <TextBlock x:Name="VersionText" FontSize="12" HorizontalAlignment="Center" Foreground="#4B627A" Margin="0,2,0,0"/>
+        <TextBlock FontSize="13" HorizontalAlignment="Center" Margin="0,16,0,0">
+            <Run Text="by "/><Hyperlink NavigateUri="https://sonuslucis.com" RequestNavigate="Link_Navigate"><Run Text="Sonus Lucis"/></Hyperlink>
+        </TextBlock>
+        <TextBlock FontSize="11" HorizontalAlignment="Center" Foreground="#4B627A" Margin="0,2,0,0" Text="sonuslucis.com"/>
+        <TextBlock FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,18,0,0" Width="360"
+                   Text="Created by Sonus Lucis with Claude.ai. Inspect, copy and export glyphs from installed fonts and from font files — TTF, OTF, TTC, WOFF, WOFF2 and EOT."/>
+        <TextBlock FontSize="10" TextWrapping="Wrap" TextAlignment="Center" Margin="0,18,0,0" Width="360" Foreground="#6B849A"
+                   Text="Interface typeface: Montserrat, licensed under the SIL Open Font License 1.1. Fonts you open remain the property of their owners — check each font's licence before using its outlines."/>
+        <Button Style="{StaticResource BrandButton}" Content="Close" Margin="0,22,0,0" HorizontalAlignment="Center"
+                Padding="28,7" IsDefault="True" IsCancel="True" Click="Close_Click"/>
+    </StackPanel>
+</Window>
