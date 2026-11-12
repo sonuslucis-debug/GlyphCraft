@@ -196,7 +196,7 @@ namespace GlyphCraft
         {
             if (_face == null) return;
             ushort gi;
-            if (!_face.Glyphs.CharacterToGlyphMap.TryGetValue(_code, out gi)) return;
+            if (!_face.Map.TryGetValue(_code, out gi)) return;
 
             Preview.Show(_face, _code);
             InfoCode.Text = "U+" + _code.ToString("X4");
@@ -326,7 +326,7 @@ namespace GlyphCraft
         {
             if (_face == null) return null;
             ushort gi;
-            if (!_face.Glyphs.CharacterToGlyphMap.TryGetValue(_code, out gi)) return null;
+            if (!_face.Map.TryGetValue(_code, out gi)) return null;
             PathGeometry pg = GlyphExport.Outline(_face, gi);
             if (pg.Figures.Count == 0)
             {
