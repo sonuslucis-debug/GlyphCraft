@@ -14,7 +14,7 @@
         </TextBlock>
         <TextBlock FontSize="11" HorizontalAlignment="Center" Foreground="#4B627A" Margin="0,2,0,0" Text="sonuslucis.com"/>
         <TextBlock FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,18,0,0" Width="360"
-                   Text="Created by Sonus Lucis with Claude.ai. Inspect, copy and export glyphs from installed fonts and from font files — TTF, OTF, TTC, WOFF, WOFF2 and EOT."/>
+                   Text="Created by Sonus Lucis with Claude.ai. Inspect, copy and export glyphs from installed fonts and from font files — TTF, OTF, TTC, WOFF, WOFF2, EOT and Type 1."/>
         <TextBlock FontSize="10" TextWrapping="Wrap" TextAlignment="Center" Margin="0,18,0,0" Width="360" Foreground="#6B849A"
                    Text="Interface typeface: Montserrat, licensed under the SIL Open Font License 1.1. Fonts you open remain the property of their owners — check each font's licence before using its outlines."/>
         <Button Style="{StaticResource BrandButton}" Content="Close" Margin="0,22,0,0" HorizontalAlignment="Center"

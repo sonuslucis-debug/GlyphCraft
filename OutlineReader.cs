@@ -23,13 +23,13 @@ namespace GlyphCraft.Core
     /// Reads glyph outlines straight from TrueType (glyf) and OpenType/CFF fonts, so GlyphCraft
     /// doesn't depend on Windows' font loader for fonts opened from files.
     /// </summary>
-    public sealed class OutlineReader
+    public sealed class OutlineReader : IOutlineSource
     {
         readonly byte[] _d;
         readonly Dictionary<string, int[]> _tables = new Dictionary<string, int[]>();
 
-        public double UnitsPerEm = 1000;
-        public int GlyphCount;
+        public double UnitsPerEm { get; private set; }
+        public int GlyphCount { get; private set; }
         readonly bool _isCff;
 
         // TrueType
@@ -45,6 +45,7 @@ namespace GlyphCraft.Core
 
         public OutlineReader(byte[] sfnt)
         {
+            UnitsPerEm = 1000;
             _d = sfnt;
             int n = U16(4);
             for (int i = 0; i < n; i++)

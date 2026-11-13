@@ -3,7 +3,7 @@
 **Character Map, turbo-charged.** A Windows app for inspecting, copying and exporting glyphs
 from installed fonts *and* from font files on any drive or media.
 
-Version 1.0.4 · 12 November 2026
+Version 1.1.0 · 12 November 2026
 
 ## Features
 
@@ -21,12 +21,13 @@ Version 1.0.4 · 12 November 2026
 - **Full font preview** button: A-Z, a-z, 1234567890, punctuation, then extended punctuation and
   symbols, at an adjustable size.
 - Filter the grid by Unicode block, find a character by typing it, its decimal code or `U+20AC`.
-- Opens fonts from files: **TTF, OTF, TTC/OTC, WOFF, WOFF2, EOT** (uncompressed). Use *Open font*,
+- Opens fonts from files: **TTF, OTF, TTC/OTC, WOFF, WOFF2, EOT** (uncompressed) and **Type 1 (.pfb, .pfa)**. Companion
+  files (.afm, .pfm, .inf) are skipped quietly; the metrics come from the font itself. Use *Open font*,
   *Open folder* (scans sub-folders, so a whole USB stick or CD works), or just drag files/folders
   onto the window. You can also pass a font file on the command line.
 
-Not supported: Type 1 (.pfb/.pfm), bitmap fonts (.fon), SVG fonts, WOFF2 collections, and EOT files
-using MicroType Express compression.
+Not supported: bitmap fonts (.fon), SVG fonts, CFF2 (variable OpenType) outlines, WOFF2 collections, and
+EOT files using MicroType Express compression.
 
 ## Building (GitHub Actions)
 

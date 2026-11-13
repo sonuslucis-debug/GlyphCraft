@@ -35,7 +35,7 @@ namespace GlyphCraft.Services
         }
 
         /// <summary>Font from a file: cmap, widths, metrics AND outlines are read from the font bytes.</summary>
-        public static FontFace CreateFromFile(string family, string style, string source, SfntData data, OutlineReader outlines)
+        public static FontFace CreateFromFile(string family, string style, string source, SfntData data, IOutlineSource outlines)
         {
             var f = new FontFace { Family = family, Style = style, Source = source };
             f.Map = data.Map;
@@ -47,7 +47,7 @@ namespace GlyphCraft.Services
             return f;
         }
 
-        public OutlineReader Outlines;      // set for fonts opened from files
+        public IOutlineSource Outlines;      // set for fonts opened from files
         readonly Dictionary<ushort, PathGeometry> _geo = new Dictionary<ushort, PathGeometry>();
 
         /// <summary>Glyph outline at 1000 units per em, y down, origin on the baseline.</summary>
@@ -164,7 +164,11 @@ namespace GlyphCraft.Services
         public static readonly string CacheDir = Path.Combine(Path.GetTempPath(), "GlyphCraft");
 
         static readonly HashSet<string> FontExt = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        { ".ttf", ".otf", ".ttc", ".otc", ".woff", ".woff2", ".eot" };
+        { ".ttf", ".otf", ".ttc", ".otc", ".woff", ".woff2", ".eot", ".pfb", ".pfa", ".t1" };
+
+        // Companion files that sit beside Type 1 fonts: nothing to open, so they're skipped quietly.
+        static readonly HashSet<string> SidecarExt = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        { ".afm", ".pfm", ".inf", ".mmm", ".otm", ".fon" };
 
         public static void CleanCache()
         {
@@ -251,7 +255,7 @@ namespace GlyphCraft.Services
                         foreach (var f in Directory.EnumerateFiles(p, "*.*", opts))
                             if (FontExt.Contains(Path.GetExtension(f))) files.Add(f);
                     }
-                    else if (File.Exists(p)) files.Add(p);
+                    else if (File.Exists(p) && !SidecarExt.Contains(Path.GetExtension(p))) files.Add(p);
                 }
                 catch { }
                 if (files.Count > 5000) break;
@@ -270,6 +274,16 @@ namespace GlyphCraft.Services
                 var info = new FileInfo(path);
                 if (info.Length > 200L * 1024 * 1024) throw new FontDecodeException("The file is too large.");
                 var bytes = File.ReadAllBytes(path);
+                if (Type1Font.LooksLikeType1(bytes))
+                {
+                    Directory.CreateDirectory(CacheDir);
+                    string hash1;
+                    using (var sha1 = SHA1.Create()) hash1 = BitConverter.ToString(sha1.ComputeHash(bytes)).Replace("-", "");
+                    string cache1 = Path.Combine(CacheDir, hash1 + ".t1");
+                    if (!File.Exists(cache1)) File.WriteAllBytes(cache1, bytes);
+                    r.CachePaths.Add(cache1);
+                    return r;
+                }
                 var faces = FontContainer.ExtractFaces(bytes);
                 Directory.CreateDirectory(CacheDir);
                 foreach (var face in faces)
@@ -297,10 +311,21 @@ namespace GlyphCraft.Services
             try
             {
                 byte[] raw = File.ReadAllBytes(cachePath);
-                SfntData data = SfntInfo.Read(raw);
+                SfntData data;
+                IOutlineSource outlines;
+                if (cachePath.EndsWith(".t1", StringComparison.OrdinalIgnoreCase))
+                {
+                    var t1 = new Type1Font(raw);
+                    data = t1.ToSfntData();
+                    outlines = t1;
+                }
+                else
+                {
+                    data = SfntInfo.Read(raw);
+                    outlines = new OutlineReader(raw);
+                }
                 if (data.Map.Count == 0)
                     throw new InvalidOperationException("this font has no character map GlyphCraft can read");
-                var outlines = new OutlineReader(raw);
 
                 string family = data.Family;
                 string style = data.Style;

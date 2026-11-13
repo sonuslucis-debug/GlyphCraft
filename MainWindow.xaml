@@ -66,7 +66,7 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
                     <TextBlock Grid.Row="3" Margin="14,8" FontSize="10" TextWrapping="Wrap" Foreground="#6B849A"
-                               Text="Drop font files or folders anywhere in this window — TTF, OTF, TTC, WOFF, WOFF2 and EOT."/>
+                               Text="Drop font files or folders anywhere in this window — TTF, OTF, TTC, WOFF, WOFF2, EOT and Type 1 (PFB)."/>
                 </Grid>
             </Border>
 

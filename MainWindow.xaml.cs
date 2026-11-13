@@ -407,7 +407,7 @@ namespace GlyphCraft
             {
                 Title = "Open font files",
                 Multiselect = true,
-                Filter = "Font files|*.ttf;*.otf;*.ttc;*.otc;*.woff;*.woff2;*.eot|All files|*.*"
+                Filter = "Font files|*.ttf;*.otf;*.ttc;*.otc;*.woff;*.woff2;*.eot;*.pfb;*.pfa;*.t1|All files|*.*"
             };
             if (dlg.ShowDialog(this) == true) await LoadPathsAsync(dlg.FileNames);
         }
