@@ -3,7 +3,7 @@
 **Character Map, turbo-charged.** A Windows app for inspecting, copying and exporting glyphs
 from installed fonts *and* from font files on any drive or media.
 
-Version 1.0.3 · 12 November 2026
+Version 1.0.4 · 12 November 2026
 
 ## Features
 

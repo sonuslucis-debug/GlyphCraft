@@ -123,7 +123,6 @@ namespace GlyphCraft.Controls
             if (_face == null || _codes.Count == 0) return;
 
             double ppd = VisualTreeHelper.GetDpi(this).PixelsPerDip;
-            GlyphTypeface gt = _face.Glyphs;
             double size = _cell * 0.5;
             int firstRow = Math.Max(0, (int)(_offset / _cell));
             int lastRow = (int)((_offset + h) / _cell);
@@ -144,7 +143,7 @@ namespace GlyphCraft.Controls
                     double adv = _face.Advance(gi) * size;
                     var origin = new Point(rect.X + (_cell - adv) / 2, rect.Y + _cell * 0.5 + size * 0.35);
                     dc.PushClip(new RectangleGeometry(rect));
-                    dc.DrawGlyphRun(sel ? Brushes.White : GlyphDraw.Navy, GlyphDraw.Single(_face, gi, size, origin, ppd));
+                    GlyphDraw.DrawGlyph(dc, sel ? Brushes.White : GlyphDraw.Navy, _face, gi, size, origin, ppd);
                     dc.Pop();
                 }
             }

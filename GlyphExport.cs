@@ -22,8 +22,7 @@ namespace GlyphCraft.Services
 
         public static PathGeometry Outline(FontFace face, ushort glyph)
         {
-            Geometry g = face.Glyphs.GetGlyphOutline(glyph, Em, Em);
-            return PathGeometry.CreateFromGeometry(g);
+            return face.GetOutline(glyph);
         }
 
         static string F(double v)

@@ -39,7 +39,6 @@ namespace GlyphCraft.Controls
         {
             var lines = new List<Line>();
             if (_face == null) return lines;
-            GlyphTypeface gt = _face.Glyphs;
             var cur = new Line();
             double x = 0;
             foreach (char ch in _text)
@@ -81,9 +80,21 @@ namespace GlyphCraft.Controls
             if (_face.LineHeight <= 0.2) baseline = _size;
             for (int i = 0; i < lines.Count; i++)
             {
-                var run = GlyphDraw.Run(_face.Glyphs, lines[i].Glyphs, lines[i].Advances, _size,
-                                        new Point(0, i * lh + baseline), ppd);
-                dc.DrawGlyphRun(GlyphDraw.Navy, run);
+                double y = i * lh + baseline;
+                if (_face.Outlines == null)
+                {
+                    dc.DrawGlyphRun(GlyphDraw.Navy, GlyphDraw.Run(_face.Glyphs, lines[i].Glyphs, lines[i].Advances, _size,
+                                                                  new Point(0, y), ppd));
+                }
+                else
+                {
+                    double x = 0;
+                    for (int k = 0; k < lines[i].Glyphs.Count; k++)
+                    {
+                        GlyphDraw.DrawGlyph(dc, GlyphDraw.Navy, _face, lines[i].Glyphs[k], _size, new Point(x, y), ppd);
+                        x += lines[i].Advances[k];
+                    }
+                }
             }
         }
     }

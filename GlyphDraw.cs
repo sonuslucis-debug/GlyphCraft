@@ -38,6 +38,19 @@ namespace GlyphCraft.Controls
             return Run(face.Glyphs, new List<ushort> { glyph }, new List<double> { face.Advance(glyph) * size }, size, origin, ppd);
         }
 
+        public static void DrawGlyph(DrawingContext dc, Brush brush, FontFace face, ushort glyph, double size, Point origin, double ppd)
+        {
+            if (face.Outlines == null)
+            {
+                dc.DrawGlyphRun(brush, Single(face, glyph, size, origin, ppd));
+                return;
+            }
+            double s = size / GlyphExport.Em;
+            dc.PushTransform(new MatrixTransform(s, 0, 0, s, origin.X, origin.Y));
+            dc.DrawGeometry(brush, null, face.GetOutline(glyph));
+            dc.Pop();
+        }
+
         public static FormattedText Label(string text, double size, Brush brush, double ppd)
         {
             var family = (FontFamily)Application.Current.FindResource("Brand");

@@ -34,16 +34,65 @@ namespace GlyphCraft.Services
             return f;
         }
 
-        /// <summary>Font from a file: cmap, widths and metrics are read straight from the font bytes.</summary>
-        public static FontFace CreateFromFile(string family, string style, string source, GlyphTypeface gt, SfntData data)
+        /// <summary>Font from a file: cmap, widths, metrics AND outlines are read from the font bytes.</summary>
+        public static FontFace CreateFromFile(string family, string style, string source, SfntData data, OutlineReader outlines)
         {
-            var f = new FontFace { Family = family, Style = style, Source = source, Glyphs = gt };
+            var f = new FontFace { Family = family, Style = style, Source = source };
             f.Map = data.Map;
             f._adv = data.Advances;
+            f.Outlines = outlines;
             f.Baseline = data.Baseline; f.LineHeight = data.LineHeight;
             f.CapsHeight = data.CapsHeight; f.XHeight = data.XHeight;
             f.Finish();
             return f;
+        }
+
+        public OutlineReader Outlines;      // set for fonts opened from files
+        readonly Dictionary<ushort, PathGeometry> _geo = new Dictionary<ushort, PathGeometry>();
+
+        /// <summary>Glyph outline at 1000 units per em, y down, origin on the baseline.</summary>
+        public PathGeometry GetOutline(ushort glyph)
+        {
+            PathGeometry pg;
+            if (_geo.TryGetValue(glyph, out pg)) return pg;
+            if (Outlines != null)
+            {
+                GlyphPath gp = Outlines.Get(glyph);
+                double sc = 1000.0 / Outlines.UnitsPerEm;
+                pg = new PathGeometry();
+                pg.FillRule = FillRule.Nonzero;
+                PathFigure fig = null;
+                int k = 0;
+                foreach (PathOp op in gp.Ops)
+                {
+                    switch (op)
+                    {
+                        case PathOp.Move:
+                            fig = new PathFigure { StartPoint = Pt(gp, k, sc), IsClosed = false, IsFilled = true };
+                            pg.Figures.Add(fig); k += 2; break;
+                        case PathOp.Line:
+                            if (fig != null) fig.Segments.Add(new LineSegment(Pt(gp, k, sc), true)); k += 2; break;
+                        case PathOp.Quad:
+                            if (fig != null) fig.Segments.Add(new QuadraticBezierSegment(Pt(gp, k, sc), Pt(gp, k + 2, sc), true)); k += 4; break;
+                        case PathOp.Cubic:
+                            if (fig != null) fig.Segments.Add(new BezierSegment(Pt(gp, k, sc), Pt(gp, k + 2, sc), Pt(gp, k + 4, sc), true)); k += 6; break;
+                        case PathOp.Close:
+                            if (fig != null) fig.IsClosed = true; break;
+                    }
+                }
+            }
+            else
+            {
+                pg = PathGeometry.CreateFromGeometry(Glyphs.GetGlyphOutline(glyph, 1000, 1000));
+            }
+            pg.Freeze();
+            _geo[glyph] = pg;
+            return pg;
+        }
+
+        static Point Pt(GlyphPath gp, int k, double sc)
+        {
+            return new Point(gp.Pts[k] * sc, -gp.Pts[k + 1] * sc);
         }
 
         void Finish()
@@ -66,6 +115,7 @@ namespace GlyphCraft.Services
         public double Advance(ushort glyph)
         {
             if (_adv != null && glyph < _adv.Length) return _adv[glyph];
+            if (Glyphs == null) return 0.5;
             return Glyphs.AdvanceWidths[glyph];
         }
 
@@ -240,40 +290,29 @@ namespace GlyphCraft.Services
             return r;
         }
 
-        /// <summary>UI thread: opens a cached sfnt as a GlyphTypeface.</summary>
+        /// <summary>Reads a cached sfnt entirely with GlyphCraft's own readers (no Windows font loading).</summary>
         public static FontFace MakeLoadedFace(string cachePath, string sourcePath, out string error)
         {
             error = null;
-            Exception last = null;
-            foreach (string path in CandidatePaths(cachePath))
+            try
             {
-                try
-                {
-                    // Everything we need is read from the bytes ourselves; Windows is only
-                    // used to draw the glyph outlines.
-                    SfntData data = SfntInfo.Read(File.ReadAllBytes(path));
-                    if (data.Map.Count == 0)
-                        throw new InvalidOperationException("this font has no character map GlyphCraft can read");
+                byte[] raw = File.ReadAllBytes(cachePath);
+                SfntData data = SfntInfo.Read(raw);
+                if (data.Map.Count == 0)
+                    throw new InvalidOperationException("this font has no character map GlyphCraft can read");
+                var outlines = new OutlineReader(raw);
 
-                    var gt = new GlyphTypeface(new Uri(path));
-
-                    string family = data.Family;
-                    string style = data.Style;
-                    if (string.IsNullOrEmpty(family)) family = Safe(() => PickName(gt.Win32FamilyNames));
-                    if (string.IsNullOrEmpty(style)) style = Safe(() => PickName(gt.Win32FaceNames));
-                    if (string.IsNullOrEmpty(family)) family = Path.GetFileNameWithoutExtension(sourcePath);
-                    if (string.IsNullOrEmpty(style)) style = "Regular";
-
-                    return FontFace.CreateFromFile(family, style, Path.GetFileName(sourcePath), gt, data);
-                }
-                catch (Exception ex)
-                {
-                    last = ex;
-                }
+                string family = data.Family;
+                string style = data.Style;
+                if (string.IsNullOrEmpty(family)) family = Path.GetFileNameWithoutExtension(sourcePath);
+                if (string.IsNullOrEmpty(style)) style = "Regular";
+                return FontFace.CreateFromFile(family, style, Path.GetFileName(sourcePath), data, outlines);
             }
-            error = "Windows couldn't open this font" +
-                    (last != null ? " (" + last.GetType().Name + ": " + last.Message + " @ " + FirstFrame(last) + ")" : "") + ".";
-            return null;
+            catch (Exception ex)
+            {
+                error = "GlyphCraft couldn't read this font (" + ex.Message + ").";
+                return null;
+            }
         }
 
         static string Safe(Func<string> f)
@@ -290,18 +329,5 @@ namespace GlyphCraft.Services
             return line.Length > 140 ? line.Substring(0, 140) : line;
         }
 
-        // Second attempt for OpenType/CFF files: same bytes under a .ttf name.
-        static IEnumerable<string> CandidatePaths(string cachePath)
-        {
-            yield return cachePath;
-            if (cachePath.EndsWith(".otf", StringComparison.OrdinalIgnoreCase))
-            {
-                string alt = Path.ChangeExtension(cachePath, ".ttf");
-                bool ok = true;
-                try { if (!File.Exists(alt)) File.Copy(cachePath, alt); }
-                catch { ok = false; }
-                if (ok) yield return alt;
-            }
-        }
     }
 }

@@ -46,7 +46,6 @@ namespace GlyphCraft.Controls
             dc.DrawRectangle(GlyphDraw.Panel, Border, new Rect(0.5, 0.5, Math.Max(0, w - 1), Math.Max(0, h - 1)));
             if (_face == null || _code < 0) return;
 
-            GlyphTypeface gt = _face.Glyphs;
             ushort gi;
             if (!_face.Map.TryGetValue(_code, out gi)) return;
 
@@ -74,7 +73,7 @@ namespace GlyphCraft.Controls
                 dc.DrawLine(Dash, new Point(x0 + adv, 0), new Point(x0 + adv, h));
             }
 
-            dc.DrawGlyphRun(GlyphDraw.Navy, GlyphDraw.Single(_face, gi, size, new Point(x0, baseY), ppd));
+            GlyphDraw.DrawGlyph(dc, GlyphDraw.Navy, _face, gi, size, new Point(x0, baseY), ppd);
         }
 
         static void HLine(DrawingContext dc, double w, double y, string label, double ppd)
