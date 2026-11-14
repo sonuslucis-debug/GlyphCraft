@@ -1,0 +1,70 @@
+<Window x:Class="GlyphCraft.ExportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Export glyphs" Width="540" SizeToContent="Height" ResizeMode="NoResize"
+        Icon="/Assets/logo.png"
+        WindowStartupLocation="CenterOwner" Background="White"
+        FontFamily="{StaticResource Brand}" Foreground="{StaticResource Ink}">
+    <Grid Margin="26,22">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Text="Export glyphs" FontSize="23" FontWeight="Bold"
+                   Foreground="{StaticResource Navy}"/>
+        <TextBlock x:Name="Intro" Grid.Row="1" Margin="0,6,0,18" FontSize="11.5" TextWrapping="Wrap"
+                   Foreground="#4B627A"/>
+
+        <Border Grid.Row="2" Background="{StaticResource Tint}" CornerRadius="4" Padding="14,12" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="FORMAT" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Accent}"
+                           Margin="0,0,0,7"/>
+                <RadioButton x:Name="EpsRadio" GroupName="Format" Content="EPS — vector outlines (one file per glyph)"
+                             IsChecked="True" Margin="0,0,0,5" Checked="Format_Changed"/>
+                <RadioButton x:Name="SvgRadio" GroupName="Format" Content="SVG — vector outlines (one file per glyph)"
+                             Margin="0,0,0,5" Checked="Format_Changed"/>
+                <RadioButton x:Name="PngRadio" GroupName="Format" Content="PNG — image with optional transparency"
+                             Margin="0,0,0,5" Checked="Format_Changed"/>
+                <RadioButton x:Name="JpgRadio" GroupName="Format" Content="JPG — image with a white background"
+                             Checked="Format_Changed"/>
+                <StackPanel x:Name="PngOptions" Margin="22,7,0,0" Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Image size" VerticalAlignment="Center" FontSize="11" Margin="0,0,8,0"/>
+                        <ComboBox x:Name="PngSize" Width="100" FontSize="11"/>
+                    </StackPanel>
+                    <CheckBox x:Name="TransparentCheck" Content="Transparent background (PNG only)"
+                              FontSize="11" Margin="0,7,0,0"/>
+                    <TextBlock Text="Tip: some apps, including Illustrator, preview transparent PNGs as a black square. Use a white background or JPG if that happens."
+                               FontSize="9.5" Foreground="#6B849A" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <TextBlock Grid.Row="3" Text="DESTINATION FOLDER" FontSize="9" FontWeight="Bold"
+                   Foreground="{StaticResource Accent}" Margin="0,0,0,6"/>
+        <DockPanel Grid.Row="4" Margin="0,0,0,10">
+            <Button DockPanel.Dock="Right" Style="{StaticResource BrandButton}" Content="Browse…"
+                    Margin="8,0,0,0" Click="Browse_Click"/>
+            <TextBox x:Name="FolderBox" Padding="6,6" FontSize="11.5" VerticalContentAlignment="Center"/>
+        </DockPanel>
+
+        <StackPanel Grid.Row="5">
+            <CheckBox x:Name="OverwriteCheck" Content="Replace files that already exist" FontSize="11"/>
+            <TextBlock Margin="0,12,0,0" FontSize="10" TextWrapping="Wrap" Foreground="#6B849A"
+                       Text="Files are named Family-Style_A_U+0041.eps (or .svg / .png / .jpg). Glyphs with no outline, such as spaces, are skipped."/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+            <Button Style="{StaticResource BrandButton}" Content="Cancel" Margin="0,0,8,0"
+                    IsCancel="True" Click="Cancel_Click"/>
+            <Button Style="{StaticResource BrandButton}" Content="Export" Margin="0" IsDefault="True"
+                    Click="Export_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

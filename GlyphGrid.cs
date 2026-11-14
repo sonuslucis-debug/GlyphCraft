@@ -8,21 +8,29 @@ using GlyphCraft.Services;
 
 namespace GlyphCraft.Controls
 {
-    /// <summary>Virtualised glyph grid - only the visible rows are drawn, so huge fonts stay fast.</summary>
+    /// <summary>
+    /// Virtualised glyph grid - only the visible rows are drawn, so huge fonts stay fast.
+    /// Supports Explorer-style multi-selection: click, Ctrl+click, Shift+click, Ctrl+A.
+    /// </summary>
     public sealed class GlyphGrid : FrameworkElement
     {
         ScrollBar _bar;
         FontFace _face;
         List<int> _codes = new List<int>();
-        int _sel = -1, _hot = -1, _cols = 1;
+        readonly HashSet<int> _selected = new HashSet<int>();
+        int _sel = -1, _hot = -1, _cols = 1, _anchor = -1;
         double _cell = 56, _offset;
 
         static readonly Pen GridPen = GlyphDraw.MakePen(GlyphDraw.LineBrush, 1);
+        static readonly Pen FocusPen = GlyphDraw.MakePen(GlyphDraw.Accent, 1.6);
+        static readonly Pen TickPen = GlyphDraw.MakePen(Brushes.White, 1.4);
+        static readonly Brush SelectionFill = GlyphDraw.Frozen(Color.FromRgb(0xD9, 0xE8, 0xF4));
 
-        public event Action<int> SelectionChanged;
-        public event Action<int> Activated;      // double-click / Enter
-        public event Action<int> Hover;          // -1 when the mouse leaves
-        public event Action CopyRequested;       // Ctrl+C
+        public event Action<int> SelectionChanged;   // primary/focused glyph (drives the big preview)
+        public event Action SelectionSetChanged;     // any change to the multi-selection
+        public event Action<int> Activated;          // double-click / Enter
+        public event Action<int> Hover;              // -1 when the mouse leaves
+        public event Action CopyRequested;           // Ctrl+C
 
         public GlyphGrid()
         {
@@ -33,6 +41,24 @@ namespace GlyphCraft.Controls
 
         public int SelectedCode { get { return _sel >= 0 && _sel < _codes.Count ? _codes[_sel] : -1; } }
         public int Count { get { return _codes.Count; } }
+        public int SelectedCount { get { return _selected.Count; } }
+
+        /// <summary>The selected glyphs in display (code point) order.</summary>
+        public IReadOnlyList<int> SelectedCodes
+        {
+            get
+            {
+                var list = new List<int>(_selected.Count);
+                for (int i = 0; i < _codes.Count; i++)
+                    if (_selected.Contains(_codes[i])) list.Add(_codes[i]);
+                return list;
+            }
+        }
+
+        /// <summary>All code points currently shown (used by export/print helpers).</summary>
+        public IReadOnlyList<int> Codes { get { return _codes; } }
+
+        public bool IsSelected(int code) { return _selected.Contains(code); }
 
         public void Attach(ScrollBar bar)
         {
@@ -46,35 +72,106 @@ namespace GlyphCraft.Controls
             _codes = codes ?? new List<int>();
             _offset = 0;
             if (_bar != null) _bar.Value = 0;
+
+            _selected.Clear();
             _sel = _codes.IndexOf(preferCode);
             if (_sel < 0 && _codes.Count > 0) _sel = 0;
+            _anchor = _sel;
+            if (_sel >= 0) _selected.Add(_codes[_sel]);
+
             _hot = -1;
             LayoutCells();
             if (_sel >= 0) EnsureVisible();
             InvalidateVisual();
             RaiseSelection();
+            RaiseSetChanged();
         }
 
         public bool Select(int code)
         {
             int i = _codes.IndexOf(code);
             if (i < 0) return false;
-            SetSel(i);
+            SelectOnly(i);
             return true;
+        }
+
+        public void SelectAll()
+        {
+            if (_codes.Count == 0) return;
+            for (int i = 0; i < _codes.Count; i++) _selected.Add(_codes[i]);
+            if (_anchor < 0) _anchor = 0;
+            InvalidateVisual();
+            RaiseSetChanged();
+        }
+
+        public void ClearSelection()
+        {
+            if (_selected.Count == 0) return;
+            _selected.Clear();
+            InvalidateVisual();
+            RaiseSetChanged();
         }
 
         void RaiseSelection()
         {
-            if (SelectionChanged != null && _sel >= 0) SelectionChanged(_codes[_sel]);
+            if (SelectionChanged != null && _sel >= 0 && _sel < _codes.Count) SelectionChanged(_codes[_sel]);
         }
 
-        void SetSel(int i)
+        void RaiseSetChanged()
+        {
+            if (SelectionSetChanged != null) SelectionSetChanged();
+        }
+
+        void SelectOnly(int i)
         {
             if (i < 0 || i >= _codes.Count) return;
+            _sel = i;
+            _anchor = i;
+            _selected.Clear();
+            _selected.Add(_codes[i]);
+            EnsureVisible();
+            InvalidateVisual();
+            RaiseSelection();
+            RaiseSetChanged();
+        }
+
+        void Toggle(int i)
+        {
+            if (i < 0 || i >= _codes.Count) return;
+            _sel = i;
+            _anchor = i;
+            int code = _codes[i];
+            if (!_selected.Remove(code)) _selected.Add(code);
+            EnsureVisible();
+            InvalidateVisual();
+            RaiseSelection();
+            RaiseSetChanged();
+        }
+
+        void SelectRange(int i, bool add)
+        {
+            if (i < 0 || i >= _codes.Count) return;
+            int a = _anchor >= 0 ? _anchor : _sel;
+            if (a < 0 || a >= _codes.Count) a = i;
+            int lo = Math.Min(a, i), hi = Math.Max(a, i);
+            if (!add) _selected.Clear();
+            for (int k = lo; k <= hi; k++) _selected.Add(_codes[k]);
             _sel = i;
             EnsureVisible();
             InvalidateVisual();
             RaiseSelection();
+            RaiseSetChanged();
+        }
+
+        void CollapseToPrimary()
+        {
+            if (_sel < 0 || _sel >= _codes.Count) return;
+            if (_selected.Count == 1 && _selected.Contains(_codes[_sel])) return;
+            _selected.Clear();
+            _selected.Add(_codes[_sel]);
+            _anchor = _sel;
+            InvalidateVisual();
+            RaiseSetChanged();
         }
 
         void LayoutCells()
@@ -134,17 +231,32 @@ namespace GlyphCraft.Controls
                     int idx = r * _cols + c;
                     if (idx >= _codes.Count) break;
                     var rect = new Rect(c * _cell, r * _cell - _offset, _cell, _cell);
-                    bool sel = idx == _sel;
-                    Brush fill = sel ? GlyphDraw.Navy : (idx == _hot ? GlyphDraw.Tint : null);
+                    bool primary = idx == _sel;
+                    bool selected = _selected.Contains(_codes[idx]);
+
+                    Brush fill = primary && selected ? GlyphDraw.Navy
+                               : selected ? SelectionFill
+                               : idx == _hot ? GlyphDraw.Tint
+                               : null;
                     dc.DrawRectangle(fill, GridPen, rect);
+                    if (primary && !selected) dc.DrawRectangle(null, FocusPen, rect);
 
                     ushort gi;
                     if (!_face.Map.TryGetValue(_codes[idx], out gi)) continue;
                     double adv = _face.Advance(gi) * size;
                     var origin = new Point(rect.X + (_cell - adv) / 2, rect.Y + _cell * 0.5 + size * 0.35);
+                    Brush ink = primary && selected ? Brushes.White : selected ? GlyphDraw.Accent : GlyphDraw.Navy;
                     dc.PushClip(new RectangleGeometry(rect));
-                    GlyphDraw.DrawGlyph(dc, sel ? Brushes.White : GlyphDraw.Navy, _face, gi, size, origin, ppd);
+                    GlyphDraw.DrawGlyph(dc, ink, _face, gi, size, origin, ppd);
                     dc.Pop();
+
+                    // Small tick in the corner makes a multiple selection obvious at a glance.
+                    if (selected && !primary)
+                    {
+                        dc.DrawRectangle(GlyphDraw.Accent, null, new Rect(rect.Right - 8, rect.Top, 8, 8));
+                        dc.DrawLine(TickPen, new Point(rect.Right - 6.2, rect.Top + 4.2), new Point(rect.Right - 4.8, rect.Top + 5.5));
+                        dc.DrawLine(TickPen, new Point(rect.Right - 4.8, rect.Top + 5.5), new Point(rect.Right - 2.2, rect.Top + 2.4));
+                    }
                 }
             }
         }
@@ -163,10 +275,36 @@ namespace GlyphCraft.Controls
             base.OnMouseDown(e);
             Focus();
             int i = IndexAt(e.GetPosition(this));
-            if (i < 0) return;
-            SetSel(i);
-            if (e.ChangedButton == MouseButton.Left && e.ClickCount == 2 && Activated != null)
-                Activated(_codes[i]);
+            bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
+            bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
+
+            if (e.ChangedButton == MouseButton.Right)
+            {
+                if (i < 0) return;
+                if (_selected.Contains(_codes[i]))
+                {
+                    _sel = i;
+                    _anchor = i;
+                    EnsureVisible();
+                    InvalidateVisual();
+                    RaiseSelection();
+                }
+                else SelectOnly(i);
+                return;
+            }
+
+            if (e.ChangedButton != MouseButton.Left || i < 0) return;
+
+            if (e.ClickCount == 2)
+            {
+                SelectOnly(i);
+                if (Activated != null) Activated(_codes[i]);
+                return;
+            }
+
+            if (shift) SelectRange(i, ctrl);
+            else if (ctrl) Toggle(i);
+            else SelectOnly(i);
         }
 
         protected override void OnMouseMove(MouseEventArgs e)
@@ -202,30 +340,50 @@ namespace GlyphCraft.Controls
         {
             base.OnKeyDown(e);
             if (_codes.Count == 0) return;
+
+            bool ctrl = (Keyboard.Modifiers & ModifierKeys.Control) != 0;
+            bool shift = (Keyboard.Modifiers & ModifierKeys.Shift) != 0;
             int page = Math.Max(1, (int)(ActualHeight / _cell) - 1) * _cols;
             int cur = _sel < 0 ? 0 : _sel;
+            int target = -1;
+
             switch (e.Key)
             {
-                case Key.Left: SetSel(cur - 1); break;
-                case Key.Right: SetSel(cur + 1); break;
-                case Key.Up: SetSel(cur - _cols); break;
-                case Key.Down: SetSel(cur + _cols); break;
-                case Key.Home: SetSel(0); break;
-                case Key.End: SetSel(_codes.Count - 1); break;
-                case Key.PageUp: SetSel(Math.Max(0, cur - page)); break;
-                case Key.PageDown: SetSel(Math.Min(_codes.Count - 1, cur + page)); break;
+                case Key.Left: target = cur - 1; break;
+                case Key.Right: target = cur + 1; break;
+                case Key.Up: target = cur - _cols; break;
+                case Key.Down: target = cur + _cols; break;
+                case Key.Home: target = 0; break;
+                case Key.End: target = _codes.Count - 1; break;
+                case Key.PageUp: target = Math.Max(0, cur - page); break;
+                case Key.PageDown: target = Math.Min(_codes.Count - 1, cur + page); break;
+                case Key.A:
+                    if (ctrl) { SelectAll(); e.Handled = true; return; }
+                    return;
+                case Key.Space:
+                    if (ctrl) { Toggle(cur); e.Handled = true; return; }
+                    return;
+                case Key.Escape:
+                    CollapseToPrimary();
+                    e.Handled = true;
+                    return;
                 case Key.Enter:
                     if (Activated != null && _sel >= 0) Activated(_codes[_sel]);
-                    break;
+                    e.Handled = true;
+                    return;
                 case Key.C:
-                    if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
+                    if (ctrl)
                     {
                         if (CopyRequested != null) CopyRequested();
-                        break;
+                        e.Handled = true;
                     }
                     return;
                 default: return;
             }
+
+            if (target < 0 || target >= _codes.Count) return;
+            if (shift) SelectRange(target, ctrl);
+            else SelectOnly(target);
             e.Handled = true;
         }
     }

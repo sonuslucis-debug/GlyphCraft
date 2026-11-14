@@ -177,6 +177,15 @@ namespace GlyphCraft.Services
 
         public static BitmapSource RenderBitmap(PathGeometry pg, double maxSide, int pad)
         {
+            return RenderBitmap(pg, maxSide, pad, null);
+        }
+
+        /// <summary>
+        /// Renders the outline to a bitmap. Pass a background brush (usually white) for
+        /// flattened images; null keeps the background transparent.
+        /// </summary>
+        public static BitmapSource RenderBitmap(PathGeometry pg, double maxSide, int pad, Brush background)
+        {
             Rect b = pg.Bounds;
             double scale = maxSide / Math.Max(b.Width, b.Height);
             int w = (int)Math.Ceiling(b.Width * scale) + 2 * pad;
@@ -184,6 +193,7 @@ namespace GlyphCraft.Services
             var dv = new DrawingVisual();
             using (DrawingContext dc = dv.RenderOpen())
             {
+                if (background != null) dc.DrawRectangle(background, null, new Rect(0, 0, w, h));
                 dc.PushTransform(new MatrixTransform(scale, 0, 0, scale, pad - b.Left * scale, pad - b.Top * scale));
                 dc.DrawGeometry(Brushes.Black, null, pg);
                 dc.Pop();
@@ -197,6 +207,16 @@ namespace GlyphCraft.Services
         public static MemoryStream ToPng(BitmapSource bmp)
         {
             var enc = new PngBitmapEncoder();
+            enc.Frames.Add(BitmapFrame.Create(bmp));
+            var ms = new MemoryStream();
+            enc.Save(ms);
+            ms.Position = 0;
+            return ms;
+        }
+
+        public static MemoryStream ToJpeg(BitmapSource bmp, int quality)
+        {
+            var enc = new JpegBitmapEncoder { QualityLevel = Math.Max(1, Math.Min(100, quality)) };
             enc.Frames.Add(BitmapFrame.Create(bmp));
             var ms = new MemoryStream();
             enc.Save(ms);

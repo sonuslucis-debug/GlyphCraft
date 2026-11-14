@@ -3,7 +3,7 @@
 **Character Map, turbo-charged.** A Windows app for inspecting, copying and exporting glyphs
 from installed fonts *and* from font files on any drive or media.
 
-Version 1.1.0 · 12 November 2026
+Version 1.2.1 · 13 November 2026
 
 ## Features
 
@@ -11,13 +11,22 @@ Version 1.1.0 · 12 November 2026
   baseline / x-height / cap-height / ascender / descender guides and the advance box.
 - Scrollable glyph grid under the preview - fast even with fonts of tens of thousands of glyphs.
   Click, arrow keys, Home/End/PageUp/PageDown. Double-click or Enter adds a glyph to *Characters to copy*.
+- **Select several glyphs at once**: Ctrl+click to add or remove, Shift+click for a range, Ctrl+A for
+  everything in the current block. Ctrl+C copies the selection as text, and the right-click menu can
+  add all selected characters to *Characters to copy*.
 - Shows the **Alt keystroke** (e.g. `Alt + 0065`) for characters that have one, plus Unicode value,
   decimal, HTML entity, glyph ID and advance width. Characters without an Alt-code show the Word
   `hex + Alt+X` method instead.
 - **Right-click the preview or any glyph** for: Copy character, Add to "Characters to copy",
-  Copy glyph as image (PNG), **Save glyph as EPS**, Save glyph as SVG.
+  Copy glyph as image (PNG), **Export glyph(s)**, Save glyph as EPS/SVG, Print specimen.
+- **Batch export**: export one or many selected glyphs as separate **EPS**, **SVG**, **PNG** or **JPG**
+  files. PNG can keep a transparent background or use white; JPG always uses white, which avoids the
+  black-square preview that some apps (including Illustrator) show for transparent PNGs.
 - EPS files are true vector outlines (Bezier curves kept), 1 em = 1000 pt, CMYK black fill,
   tight bounding box - ready for Illustrator.
+- **Print specimen sheet**: opens a print preview with the font name, a large Aa, uppercase,
+  lowercase, numerals, punctuation, symbols, a pangram and any glyphs currently selected. The sheet is
+  vector-drawn, so fonts opened from files print as sharply as installed fonts.
 - **Full font preview** button: A-Z, a-z, 1234567890, punctuation, then extended punctuation and
   symbols, at an adjustable size.
 - Filter the grid by Unicode block, find a character by typing it, its decimal code or `U+20AC`.
@@ -38,7 +47,7 @@ EOT files using MicroType Express compression.
 
 ## Credits
 
-GlyphCraft is created by **Sonus Lucis** ([sonuslucis.com](https://sonuslucis.com)) with Claude.ai.
+GlyphCraft is created by **Sonus Lucis** ([sonuslucis.com](https://sonuslucis.com)) with Claude.ai and DeepSeek V4.1 Flash Free.
 Interface typeface: Montserrat (SIL Open Font License 1.1). See `THIRD-PARTY-NOTICES.txt`.
 
 ## Copyright

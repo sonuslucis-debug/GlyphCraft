@@ -10,6 +10,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using GlyphCraft.Core;
 using GlyphCraft.Services;
@@ -35,6 +36,9 @@ namespace GlyphCraft
         bool _full;
         string _baseStatus = "";
         string _lastDir;
+        string _lastExportDir;
+
+        MenuItem _miCopySelection, _miAddSelection, _miExport, _miSaveEps, _miSaveSvg;
 
         const string UpperText = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         const string LowerText = "abcdefghijklmnopqrstuvwxyz";
@@ -53,11 +57,13 @@ namespace GlyphCraft
 
             GlyphGridView.Attach(GridBar);
             GlyphGridView.SelectionChanged += OnGlyphSelected;
+            GlyphGridView.SelectionSetChanged += OnSelectionSetChanged;
             GlyphGridView.Activated += code => AddToCopy(code);
             GlyphGridView.Hover += OnHover;
-            GlyphGridView.CopyRequested += CopyChar;
-            GlyphGridView.ContextMenu = BuildMenu();
-            Preview.ContextMenu = BuildMenu();
+            GlyphGridView.CopyRequested += CopySelectedText;
+            var menu = BuildMenu();
+            GlyphGridView.ContextMenu = menu;
+            Preview.ContextMenu = menu;
         }
 
         // ------------------------------------------------------------ startup
@@ -118,6 +124,9 @@ namespace GlyphCraft
                 BlockBox.ItemsSource = null;
                 GlyphGridView.SetData(null, new List<int>(), -1);
                 Preview.Show(null, -1);
+                if (ExportBtn != null) ExportBtn.IsEnabled = false;
+                if (PrintBtn != null) PrintBtn.IsEnabled = false;
+                if (SelectionText != null) SelectionText.Text = "";
                 SetStatus(entry.Name + " — Windows couldn't read any glyphs from this font.");
                 return;
             }
@@ -157,6 +166,7 @@ namespace GlyphCraft
                           (face.Source == "Installed" ? "Installed font" : "From file: " + face.Source);
             SetStatus(_baseStatus);
 
+            if (PrintBtn != null) PrintBtn.IsEnabled = true;
             FillGrid(PreferredCode());
             if (_full) RefreshFull();
         }
@@ -190,6 +200,22 @@ namespace GlyphCraft
         {
             _code = code;
             UpdateInfo();
+        }
+
+        void OnSelectionSetChanged()
+        {
+            int n = GlyphGridView.SelectedCount;
+            if (SelectionText != null) SelectionText.Text = n > 1 ? n + " selected" : "";
+            if (ExportBtn != null) ExportBtn.IsEnabled = _face != null && n > 0;
+            if (PrintBtn != null) PrintBtn.IsEnabled = _face != null;
+        }
+
+        /// <summary>Selected glyphs, falling back to the focused glyph so single-glyph actions still work.</summary>
+        List<int> SelectionCodes()
+        {
+            var codes = new List<int>(GlyphGridView.SelectedCodes);
+            if (codes.Count == 0 && _code >= 0) codes.Add(_code);
+            return codes;
         }
 
         void UpdateInfo()
@@ -288,6 +314,33 @@ namespace GlyphCraft
             if (SafeSetText(CharString(_code))) SetStatus("Copied U+" + _code.ToString("X4") + " to the clipboard.");
         }
 
+        void CopySelectedText()
+        {
+            if (_face == null) return;
+            var codes = SelectionCodes();
+            if (codes.Count == 0) return;
+            if (codes.Count == 1)
+            {
+                if (SafeSetText(CharString(codes[0])))
+                    SetStatus("Copied U+" + codes[0].ToString("X4") + " to the clipboard.");
+                return;
+            }
+
+            var sb = new StringBuilder();
+            foreach (int code in codes) sb.Append(CharString(code));
+            if (SafeSetText(sb.ToString())) SetStatus("Copied " + codes.Count + " characters to the clipboard.");
+        }
+
+        void AddSelectionToCopy()
+        {
+            var codes = SelectionCodes();
+            if (codes.Count == 0) return;
+            var sb = new StringBuilder();
+            foreach (int code in codes) sb.Append(CharString(code));
+            CopyBox.Text += sb.ToString();
+            CopyBox.CaretIndex = CopyBox.Text.Length;
+        }
+
         bool SafeSetText(string s)
         {
             for (int attempt = 0; attempt < 3; attempt++)
@@ -306,13 +359,48 @@ namespace GlyphCraft
         {
             var m = new ContextMenu();
             m.FontFamily = (FontFamily)FindResource("Brand");
+
             m.Items.Add(MenuEntry("Copy character", (s, e) => CopyChar()));
+            _miCopySelection = MenuEntry("Copy selected characters", (s, e) => CopySelectedText());
+            m.Items.Add(_miCopySelection);
             m.Items.Add(MenuEntry("Add to “Characters to copy”", (s, e) => { if (_face != null) AddToCopy(_code); }));
+            _miAddSelection = MenuEntry("Add selected characters to “Characters to copy”", (s, e) => AddSelectionToCopy());
+            m.Items.Add(_miAddSelection);
             m.Items.Add(MenuEntry("Copy glyph as image (PNG)", (s, e) => CopyImage()));
             m.Items.Add(new Separator());
-            m.Items.Add(MenuEntry("Save glyph as EPS…", (s, e) => SaveVector(true)));
-            m.Items.Add(MenuEntry("Save glyph as SVG…", (s, e) => SaveVector(false)));
+
+            _miExport = MenuEntry("Export glyph…", (s, e) => Export_Click(s, e));
+            m.Items.Add(_miExport);
+            _miSaveEps = MenuEntry("Save glyph as EPS…", (s, e) => SaveVector(true));
+            m.Items.Add(_miSaveEps);
+            _miSaveSvg = MenuEntry("Save glyph as SVG…", (s, e) => SaveVector(false));
+            m.Items.Add(_miSaveSvg);
+            m.Items.Add(new Separator());
+            m.Items.Add(MenuEntry("Print font specimen…", (s, e) => PrintSpecimen_Click(s, e)));
+
+            m.Opened += delegate { UpdateMenu(); };
             return m;
+        }
+
+        void UpdateMenu()
+        {
+            int n = GlyphGridView.SelectedCount;
+            bool multi = n > 1;
+
+            if (_miCopySelection != null)
+            {
+                _miCopySelection.Header = "Copy " + n + " selected characters";
+                _miCopySelection.Visibility = multi ? Visibility.Visible : Visibility.Collapsed;
+            }
+            if (_miAddSelection != null)
+            {
+                _miAddSelection.Header = "Add " + n + " selected characters to “Characters to copy”";
+                _miAddSelection.Visibility = multi ? Visibility.Visible : Visibility.Collapsed;
+            }
+            if (_miExport != null)
+                _miExport.Header = multi ? "Export " + n + " selected glyphs…" : "Export glyph…";
+            if (_miSaveEps != null) _miSaveEps.Visibility = multi ? Visibility.Collapsed : Visibility.Visible;
+            if (_miSaveSvg != null) _miSaveSvg.Visibility = multi ? Visibility.Collapsed : Visibility.Visible;
         }
 
         static MenuItem MenuEntry(string header, RoutedEventHandler handler)
@@ -397,6 +485,82 @@ namespace GlyphCraft
                 MessageBox.Show(this, "Couldn't save the file: " + ex.Message, "GlyphCraft",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
             }
+        }
+
+        // ------------------------------------------------------------ batch export
+
+        async void Export_Click(object sender, RoutedEventArgs e)
+        {
+            if (_face == null) return;
+            var codes = SelectionCodes();
+            if (codes.Count == 0) return;
+
+            FontFace face = _face;
+            var dlg = new ExportWindow(face, codes, _lastExportDir) { Owner = this };
+            if (dlg.ShowDialog() != true) return;
+            await RunExportAsync(face, codes, dlg);
+        }
+
+        async Task RunExportAsync(FontFace face, List<int> codes, ExportWindow options)
+        {
+            int written = 0, skipped = 0, failed = 0;
+            var errors = new List<string>();
+
+            Cursor = Cursors.Wait;
+            if (ExportBtn != null) ExportBtn.IsEnabled = false;
+            try
+            {
+                for (int i = 0; i < codes.Count; i++)
+                {
+                    var r = GlyphExporter.ExportOne(face, codes[i], options.Folder, options.Format,
+                                                    options.PngSizePixels, options.Overwrite,
+                                                    options.TransparentBackground);
+                    if (r.Written) written++;
+                    else if (r.Skipped) skipped++;
+                    else
+                    {
+                        failed++;
+                        if (errors.Count < 8)
+                            errors.Add("U+" + codes[i].ToString("X4") + " — " + r.Message);
+                    }
+
+                    if ((i & 7) == 7)
+                    {
+                        SetStatus("Exporting " + (i + 1) + " of " + codes.Count + " glyphs…");
+                        await Dispatcher.InvokeAsync(delegate { }, DispatcherPriority.Background);
+                    }
+                }
+
+                _lastExportDir = options.Folder;
+                string summary = "Exported " + written + (written == 1 ? " glyph" : " glyphs") + " from " + face.Title;
+                if (skipped > 0) summary += ", skipped " + skipped;
+                if (failed > 0) summary += ", failed " + failed;
+                SetStatus(summary + "  ·  " + _baseStatus);
+
+                if (failed > 0)
+                {
+                    string msg = string.Join("\n", errors);
+                    if (failed > errors.Count) msg += "\n…and " + (failed - errors.Count) + " more.";
+                    MessageBox.Show(this, "Some glyphs couldn't be exported:\n\n" + msg, "Export glyphs",
+                        MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "The export stopped unexpectedly:\n\n" + ex.Message, "Export glyphs",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            finally
+            {
+                Cursor = null;
+                OnSelectionSetChanged();
+            }
+        }
+
+        void PrintSpecimen_Click(object sender, RoutedEventArgs e)
+        {
+            if (_face == null) return;
+            new SpecimenWindow(_face, GlyphGridView.SelectedCodes) { Owner = this }.ShowDialog();
         }
 
         // ------------------------------------------------------------ opening fonts
